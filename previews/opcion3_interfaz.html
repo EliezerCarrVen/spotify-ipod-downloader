@@ -1,0 +1,364 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Spotify iPod Downloader · Opción 3</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --bg: #0c111d;
+      --panel: rgba(18, 25, 40, .78);
+      --panel-strong: #141d31;
+      --text: #edf4ff;
+      --muted: #a8b3c7;
+      --accent: #1ed760;
+      --accent-2: #65d4ff;
+      --warning: #ffd166;
+      --danger: #ff6b6b;
+      --line: rgba(255,255,255,.12);
+      --radius: 24px;
+      --shadow: 0 24px 80px rgba(0,0,0,.45);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(30, 215, 96, .22), transparent 34rem),
+        radial-gradient(circle at 80% 20%, rgba(101, 212, 255, .18), transparent 30rem),
+        linear-gradient(135deg, #08101d 0%, var(--bg) 48%, #101827 100%);
+      color: var(--text);
+      display: grid;
+      place-items: center;
+      padding: 32px;
+    }
+
+    .app-shell {
+      width: min(1180px, 100%);
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 24px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .hero {
+      padding: 34px;
+      display: flex;
+      flex-direction: column;
+      gap: 28px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      width: fit-content;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(30, 215, 96, .12);
+      color: #a8ffc8;
+      font-weight: 700;
+      font-size: 13px;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(36px, 5vw, 64px);
+      line-height: .95;
+      letter-spacing: -.06em;
+    }
+
+    .lead {
+      margin: 0;
+      max-width: 62ch;
+      color: var(--muted);
+      font-size: 18px;
+      line-height: 1.65;
+    }
+
+    .input-panel {
+      display: grid;
+      gap: 18px;
+      padding: 22px;
+      background: rgba(255,255,255,.055);
+      border: 1px solid var(--line);
+      border-radius: 20px;
+    }
+
+    label {
+      color: #d7e2f5;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .url-row {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+    }
+
+    input, select, button {
+      border: 0;
+      border-radius: 16px;
+      font: inherit;
+    }
+
+    input, select {
+      width: 100%;
+      padding: 17px 18px;
+      background: #0b1220;
+      border: 1px solid rgba(255,255,255,.14);
+      color: var(--text);
+      outline: none;
+    }
+
+    input:focus, select:focus {
+      border-color: rgba(30, 215, 96, .85);
+      box-shadow: 0 0 0 4px rgba(30, 215, 96, .12);
+    }
+
+    button {
+      padding: 17px 22px;
+      cursor: pointer;
+      color: #06110b;
+      font-weight: 900;
+      background: linear-gradient(135deg, var(--accent), #93ffb8);
+      box-shadow: 0 12px 30px rgba(30, 215, 96, .22);
+      white-space: nowrap;
+    }
+
+    .chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .chip {
+      padding: 9px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      background: rgba(255,255,255,.04);
+      font-size: 13px;
+    }
+
+    .options {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    .option {
+      padding: 16px;
+      border-radius: 18px;
+      background: #0b1220;
+      border: 1px solid var(--line);
+    }
+
+    .option strong { display: block; margin-bottom: 6px; }
+    .option span { color: var(--muted); font-size: 13px; line-height: 1.45; }
+    .option.active { border-color: rgba(30,215,96,.75); background: rgba(30,215,96,.1); }
+
+    .side {
+      display: grid;
+      gap: 24px;
+    }
+
+    .preview-card { padding: 24px; }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+
+    .section-title h2 { margin: 0; font-size: 20px; }
+    .pill { color: #93ffb8; font-weight: 800; font-size: 13px; }
+
+    .track-list { display: grid; gap: 12px; }
+
+    .track {
+      display: grid;
+      grid-template-columns: 44px 1fr auto;
+      align-items: center;
+      gap: 12px;
+      padding: 12px;
+      background: rgba(255,255,255,.045);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+    }
+
+    .cover {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      display: grid;
+      place-items: center;
+      color: #07111d;
+      font-weight: 900;
+    }
+
+    .track b, .track small { display: block; }
+    .track small { color: var(--muted); margin-top: 3px; }
+    .status { color: var(--accent); font-size: 13px; font-weight: 900; }
+
+    .pipeline {
+      padding: 24px;
+      background: var(--panel-strong);
+    }
+
+    .steps {
+      display: grid;
+      gap: 16px;
+      margin-top: 18px;
+    }
+
+    .step {
+      display: grid;
+      grid-template-columns: 34px 1fr;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .step-num {
+      width: 34px;
+      height: 34px;
+      border-radius: 50%;
+      display: grid;
+      place-items: center;
+      background: rgba(30,215,96,.14);
+      color: #a8ffc8;
+      font-weight: 900;
+    }
+
+    .step p { margin: 4px 0 0; color: var(--muted); line-height: 1.45; }
+
+    .footer-note {
+      margin-top: auto;
+      padding-top: 12px;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    @media (max-width: 900px) {
+      body { padding: 18px; }
+      .app-shell { grid-template-columns: 1fr; }
+      .options, .url-row { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app-shell" aria-label="Preview de interfaz para la opción 3 del sincronizador">
+    <section class="card hero">
+      <span class="eyebrow">Opción 3 · Enlace directo</span>
+      <div>
+        <h1>Descarga limpia desde Spotify o YouTube.</h1>
+        <p class="lead">
+          Una interfaz enfocada en pegar un enlace, detectar el tipo de contenido, revisar las canciones antes de descargar y preparar la sincronización OTA al iPod con VLC.
+        </p>
+      </div>
+
+      <form class="input-panel">
+        <label for="source-url">Pega tu enlace</label>
+        <div class="url-row">
+          <input id="source-url" value="https://open.spotify.com/playlist/37i9dQZF1DXcBWIGoYBM5M" aria-label="URL de Spotify o YouTube" />
+          <button type="button">Analizar enlace</button>
+        </div>
+
+        <div class="chips" aria-label="Tipos soportados">
+          <span class="chip">Spotify playlist</span>
+          <span class="chip">Spotify álbum</span>
+          <span class="chip">YouTube video</span>
+          <span class="chip">YouTube playlist</span>
+        </div>
+
+        <div class="options" aria-label="Opciones rápidas">
+          <div class="option active">
+            <strong>Audio M4A</strong>
+            <span>Prioriza formato compatible con VLC/iPod.</span>
+          </div>
+          <div class="option">
+            <strong>Tags + portada</strong>
+            <span>Agrega artista, álbum, carátula y letras.</span>
+          </div>
+          <div class="option">
+            <strong>Sync OTA</strong>
+            <span>Sube canciones y M3U por Wi‑Fi.</span>
+          </div>
+        </div>
+      </form>
+
+      <p class="footer-note">
+        Preview estática: esta pantalla representa el flujo renovado de la opción 3 antes de conectarlo al backend Python.
+      </p>
+    </section>
+
+    <aside class="side">
+      <section class="card preview-card">
+        <div class="section-title">
+          <h2>Vista previa del contenido</h2>
+          <span class="pill">Detectado: Spotify playlist</span>
+        </div>
+        <div class="track-list">
+          <article class="track">
+            <div class="cover">1</div>
+            <div><b>Blinding Lights</b><small>The Weeknd · After Hours</small></div>
+            <span class="status">Listo</span>
+          </article>
+          <article class="track">
+            <div class="cover">2</div>
+            <div><b>As It Was</b><small>Harry Styles · Harry's House</small></div>
+            <span class="status">Listo</span>
+          </article>
+          <article class="track">
+            <div class="cover">3</div>
+            <div><b>Levitating</b><small>Dua Lipa · Future Nostalgia</small></div>
+            <span class="status">Listo</span>
+          </article>
+        </div>
+      </section>
+
+      <section class="card pipeline">
+        <div class="section-title">
+          <h2>Pipeline propuesto</h2>
+          <span class="pill">4 pasos</span>
+        </div>
+        <div class="steps">
+          <div class="step">
+            <div class="step-num">1</div>
+            <div><strong>Analizar enlace</strong><p>Detecta si es álbum, playlist o video y obtiene metadatos.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num">2</div>
+            <div><strong>Confirmar canciones</strong><p>Permite revisar qué se descargará antes de iniciar.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num">3</div>
+            <div><strong>Descargar y etiquetar</strong><p>Busca audio, descarga, agrega portada, tags y letras.</p></div>
+          </div>
+          <div class="step">
+            <div class="step-num">4</div>
+            <div><strong>Sincronizar al iPod</strong><p>Sube canciones y playlists M3U por SFTP.</p></div>
+          </div>
+        </div>
+      </section>
+    </aside>
+  </main>
+</body>
+</html>
