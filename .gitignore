@@ -30,3 +30,8 @@ Desktop.ini
 
 # Agents/Gemini config
 .agents/
+
+# PyInstaller / desktop packaging artifacts
+mk3/build/
+mk3/dist/
+mk3/packaging/*.spec
