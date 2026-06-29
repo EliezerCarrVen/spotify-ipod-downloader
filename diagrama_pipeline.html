@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Pipeline Inalámbrico: Spotify → iPod Touch 5 (iOS 8.4.1)</title>
+  <meta name="description" content="Diagrama de arquitectura del pipeline 100% automatizado e inalámbrico usando SSH, SFTP y Gremlin en iOS 8.4.1 Jailbreak." />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #060913;
+      --surface: #0b1120;
+      --surface2: #111a30;
+      --border: rgba(255,255,255,0.06);
+      --border-glow: rgba(167,139,250,0.3);
+
+      --spotify: #1DB954;
+      --spotify-glow: rgba(29,185,84,0.35);
+
+      --ytm: #FF0000;
+      --ytm-glow: rgba(255,0,0,0.35);
+
+      --ssh: #8B5CF6;
+      --ssh-glow: rgba(139,92,246,0.35);
+
+      --gremlin: #38BDF8;
+      --gremlin-glow: rgba(56,189,248,0.35);
+
+      --ipod: #F59E0B;
+      --ipod-glow: rgba(245,158,11,0.35);
+
+      --process: #10B981;
+      --process-glow: rgba(16,185,129,0.25);
+
+      --text: #E2E8F0;
+      --text-muted: #94A3B8;
+      --text-dim: #64748B;
+
+      --phase1: rgba(29,185,84,0.08);
+      --phase2: rgba(255,0,0,0.08);
+      --phase3: rgba(139,92,246,0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background:
+        radial-gradient(ellipse 60% 40% at 15% 20%, rgba(29,185,84,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 50% 40% at 85% 70%, rgba(139,92,246,0.07) 0%, transparent 60%),
+        radial-gradient(ellipse 40% 30% at 50% 50%, rgba(56,189,248,0.05) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    header {
+      position: relative;
+      z-index: 10;
+      text-align: center;
+      padding: 56px 24px 40px;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(139,92,246,0.1);
+      border: 1px solid rgba(139,92,246,0.3);
+      border-radius: 100px;
+      padding: 6px 16px;
+      font-size: 12px;
+      font-weight: 600;
+      color: #A78BFA;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-bottom: 20px;
+    }
+
+    .badge::before {
+      content: '';
+      width: 7px; height: 7px;
+      border-radius: 50%;
+      background: #A78BFA;
+      box-shadow: 0 0 8px #A78BFA;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50% { opacity:0.5; transform:scale(1.3); }
+    }
+
+    header h1 {
+      font-size: clamp(28px, 5vw, 48px);
+      font-weight: 800;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #E2E8F0 0%, #A78BFA 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+    }
+
+    header p {
+      font-size: 16px;
+      color: var(--text-muted);
+      max-width: 700px;
+      margin: 0 auto;
+      line-height: 1.6;
+    }
+
+    main {
+      position: relative;
+      z-index: 5;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 0 24px 80px;
+    }
+
+    .legend {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 48px;
+    }
+
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 13px;
+      color: var(--text-muted);
+      transition: all 0.2s ease;
+    }
+
+    .legend-item:hover { border-color: rgba(255,255,255,0.15); color: var(--text); }
+
+    .legend-dot {
+      width: 10px; height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+
+    .phase {
+      position: relative;
+      border-radius: 20px;
+      padding: 32px;
+      margin-bottom: 16px;
+      border: 1px solid var(--border);
+      transition: border-color 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .phase:hover { border-color: rgba(255,255,255,0.1); }
+    .phase-1 { background: var(--phase1); }
+    .phase-2 { background: var(--phase2); }
+    .phase-3 { background: var(--phase3); }
+
+    .phase-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .phase-number {
+      width: 36px; height: 36px;
+      border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .phase-1 .phase-number { background: rgba(29,185,84,0.15); color: var(--spotify); border: 1px solid rgba(29,185,84,0.3); }
+    .phase-2 .phase-number { background: rgba(255,0,0,0.15); color: #FF6B6B; border: 1px solid rgba(255,0,0,0.3); }
+    .phase-3 .phase-number { background: rgba(139,92,246,0.15); color: #A78BFA; border: 1px solid rgba(139,92,246,0.3); }
+
+    .phase-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .phase-subtitle {
+      font-size: 13px;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .nodes-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: stretch;
+    }
+
+    .node {
+      flex: 1;
+      min-width: 180px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 20px;
+      cursor: pointer;
+      transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .node::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      border-radius: 16px;
+    }
+
+    .node:hover { transform: translateY(-4px); }
+    .node:hover::before { opacity: 1; }
+
+    .node-spotify { border-color: rgba(29,185,84,0.3); }
+    .node-spotify::before { background: radial-gradient(ellipse at top, rgba(29,185,84,0.1), transparent 70%); }
+    .node-spotify:hover { box-shadow: 0 20px 40px -10px var(--spotify-glow), 0 0 0 1px rgba(29,185,84,0.4); }
+
+    .node-ytm { border-color: rgba(255,80,80,0.3); }
+    .node-ytm::before { background: radial-gradient(ellipse at top, rgba(255,80,80,0.1), transparent 70%); }
+    .node-ytm:hover { box-shadow: 0 20px 40px -10px var(--ytm-glow), 0 0 0 1px rgba(255,80,80,0.4); }
+
+    .node-ssh { border-color: rgba(139,92,246,0.3); }
+    .node-ssh::before { background: radial-gradient(ellipse at top, rgba(139,92,246,0.1), transparent 70%); }
+    .node-ssh:hover { box-shadow: 0 20px 40px -10px var(--ssh-glow), 0 0 0 1px rgba(139,92,246,0.4); }
+
+    .node-process { border-color: rgba(16,185,129,0.3); }
+    .node-process::before { background: radial-gradient(ellipse at top, rgba(16,185,129,0.1), transparent 70%); }
+    .node-process:hover { box-shadow: 0 20px 40px -10px var(--process-glow), 0 0 0 1px rgba(16,185,129,0.4); }
+
+    .node-gremlin { border-color: rgba(56,189,248,0.3); }
+    .node-gremlin::before { background: radial-gradient(ellipse at top, rgba(56,189,248,0.1), transparent 70%); }
+    .node-gremlin:hover { box-shadow: 0 20px 40px -10px var(--gremlin-glow), 0 0 0 1px rgba(56,189,248,0.4); }
+
+    .node-ipod { border-color: rgba(245,158,11,0.3); }
+    .node-ipod::before { background: radial-gradient(ellipse at top, rgba(245,158,11,0.1), transparent 70%); }
+    .node-ipod:hover { box-shadow: 0 20px 40px -10px var(--ipod-glow), 0 0 0 1px rgba(245,158,11,0.4); }
+
+    .node-icon {
+      width: 44px; height: 44px;
+      border-radius: 12px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 22px;
+      margin-bottom: 14px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .node-spotify .node-icon { background: rgba(29,185,84,0.15); }
+    .node-ytm .node-icon { background: rgba(255,80,80,0.15); }
+    .node-ssh .node-icon { background: rgba(139,92,246,0.15); }
+    .node-process .node-icon { background: rgba(16,185,129,0.15); }
+    .node-gremlin .node-icon { background: rgba(56,189,248,0.15); }
+    .node-ipod .node-icon { background: rgba(245,158,11,0.15); }
+
+    .node-name {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      position: relative;
+      z-index: 1;
+    }
+
+    .node-desc {
+      font-size: 12px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      position: relative;
+      z-index: 1;
+    }
+
+    .node-lib {
+      display: inline-block;
+      margin-top: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      background: rgba(255,255,255,0.06);
+      border-radius: 4px;
+      padding: 3px 8px;
+      color: var(--text-dim);
+      position: relative;
+      z-index: 1;
+    }
+
+    .arrow-connector {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 4px 0;
+      margin: 8px 0;
+    }
+
+    .arrow-line {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .arrow-label {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 100px;
+      padding: 4px 14px;
+      font-size: 11px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+
+    .arrow-svg {
+      display: block;
+      opacity: 0.4;
+    }
+
+    .step-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 3px 8px;
+      font-size: 10px;
+      font-weight: 600;
+      color: var(--text-dim);
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .final-section {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 24px;
+      margin-top: 16px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+    }
+
+    .final-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .final-arrow-label {
+      font-size: 11px;
+      color: #A78BFA;
+      text-align: center;
+      max-width: 150px;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+
+    .details-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+      gap: 16px;
+      margin-top: 48px;
+    }
+
+    .detail-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      transition: all 0.3s ease;
+    }
+
+    .detail-card:hover {
+      border-color: rgba(255,255,255,0.1);
+      transform: translateY(-2px);
+    }
+
+    .detail-card-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+
+    .detail-icon {
+      width: 40px; height: 40px;
+      border-radius: 10px;
+      background: rgba(139,92,246,0.1);
+      border: 1px solid rgba(139,92,246,0.2);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 18px;
+    }
+
+    .detail-title {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .detail-step {
+      font-size: 11px;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .detail-list {
+      list-style: none;
+    }
+
+    .detail-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      font-size: 13px;
+      color: var(--text-muted);
+      line-height: 1.5;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .detail-list li:last-child { border-bottom: none; }
+
+    .detail-list li::before {
+      content: '›';
+      color: var(--ssh);
+      font-weight: 700;
+      font-size: 16px;
+      flex-shrink: 0;
+      line-height: 1.3;
+    }
+
+    .tech-section {
+      margin-top: 48px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 32px;
+    }
+
+    .tech-title {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 24px;
+      color: var(--text);
+    }
+
+    .tech-grid {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .tech-chip {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      background: var(--surface2);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 10px 16px;
+      transition: all 0.2s ease;
+    }
+
+    .tech-chip:hover {
+      border-color: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.05);
+    }
+
+    .tech-chip-icon { font-size: 18px; }
+
+    .tech-chip-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px;
+      color: var(--text);
+      font-weight: 500;
+    }
+
+    .tech-chip-role {
+      font-size: 11px;
+      color: var(--text-dim);
+      margin-top: 1px;
+    }
+
+    .warning-note {
+      display: flex;
+      align-items: flex-start;
+      gap: 14px;
+      background: rgba(245,158,11,0.07);
+      border: 1px solid rgba(245,158,11,0.25);
+      border-radius: 14px;
+      padding: 20px 24px;
+      margin-top: 24px;
+    }
+
+    .warning-icon { font-size: 22px; flex-shrink: 0; }
+
+    .warning-text {
+      font-size: 13px;
+      color: rgba(245,158,11,0.9);
+      line-height: 1.6;
+    }
+
+    .warning-text strong { font-weight: 700; }
+
+    footer {
+      position: relative;
+      z-index: 5;
+      text-align: center;
+      padding: 32px 24px;
+      border-top: 1px solid var(--border);
+      color: var(--text-dim);
+      font-size: 12px;
+    }
+
+    @keyframes wave {
+      0%, 100% { transform: translateY(0); opacity: 0.3; }
+      50% { transform: translateY(-4px); opacity: 1; }
+    }
+
+    .wave-dot {
+      display: inline-block;
+      width: 6px; height: 6px;
+      background: var(--ssh);
+      border-radius: 50%;
+      margin: 0 2px;
+      animation: wave 1.2s infinite ease-in-out;
+    }
+    .wave-dot:nth-child(2) { animation-delay: 0.2s; }
+    .wave-dot:nth-child(3) { animation-delay: 0.4s; }
+
+    @media (max-width: 700px) {
+      .nodes-row { flex-direction: column; }
+      .final-section { grid-template-columns: 1fr; text-align: center; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="badge">Pipeline OTA Inalámbrico · iPod Touch 5 (iOS 8.4.1)</div>
+  <h1>Spotify → iPod Touch 5 WiFi Sync</h1>
+  <p>Arquitectura optimizada para sincronización Over-The-Air sin cables. Descarga audio M4A de estudio, inyecta carátulas y letras sincronizadas e importa remotamente vía SSH/Gremlin.</p>
+</header>
+
+<main>
+
+  <div class="legend">
+    <div class="legend-item"><span class="legend-dot" style="background:#1DB954"></span> Spotify API</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#FF6B6B"></span> YouTube Music</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#10B981"></span> Procesamiento PC</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#8B5CF6"></span> Protocolo WiFi SSH/SFTP</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#38BDF8"></span> iOS 8.4.1 Import Core</div>
+    <div class="legend-item"><span class="legend-dot" style="background:#F59E0B"></span> iPod Touch 5 (Jailbreak)</div>
+  </div>
+
+  <!-- FASE 1 -->
+  <div class="phase phase-1">
+    <div class="phase-header">
+      <div class="phase-number">F1</div>
+      <div>
+        <div class="phase-title">Fase 1 — Extracción de Metadatos</div>
+        <div class="phase-subtitle">Extraer metadatos de Spotify y mantener sincronización incremental local</div>
+      </div>
+    </div>
+    <div class="nodes-row">
+      <div class="node node-spotify">
+        <div class="node-icon">🎵</div>
+        <div class="step-badge">Paso 1</div>
+        <div class="node-name">Spotify API</div>
+        <div class="node-desc">Consulta playlists, canciones, artistas y extrae la carátula en máxima resolución de Spotify (640×640 px).</div>
+        <span class="node-lib">spotipy</span>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 8px;">
+        <svg width="40" height="20" viewBox="0 0 40 20" class="arrow-svg">
+          <defs><marker id="a1" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="rgba(148,163,184,0.6)"/></marker></defs>
+          <line x1="2" y1="10" x2="32" y2="10" stroke="rgba(148,163,184,0.5)" stroke-width="1.5" marker-end="url(#a1)"/>
+        </svg>
+      </div>
+      <div class="node node-process">
+        <div class="node-icon">🗄️</div>
+        <div class="step-badge">Paso 2</div>
+        <div class="node-name">Base de Datos Local</div>
+        <div class="node-desc">Almacena el mapeo de canciones. Permite el Delta Sync: sólo se procesará y enviará al iPod la música añadida recientemente.</div>
+        <span class="node-lib">SQLite</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="arrow-connector">
+    <div class="arrow-line">
+      <div class="arrow-label">✅ Metadatos listos → Búsqueda inteligente</div>
+    </div>
+  </div>
+
+  <!-- FASE 2 -->
+  <div class="phase phase-2">
+    <div class="phase-header">
+      <div class="phase-number">F2</div>
+      <div>
+        <div class="phase-title">Fase 2 — Búsqueda en YT Music y Descarga</div>
+        <div class="phase-subtitle">Garantizar versiones oficiales de estudio (sin videoclips pesados ni intros)</div>
+      </div>
+    </div>
+    <div class="nodes-row">
+      <div class="node node-ytm">
+        <div class="node-icon">🎧</div>
+        <div class="step-badge">Paso 3</div>
+        <div class="node-name">Buscador YT Music</div>
+        <div class="node-desc">Busca exclusivamente en el catálogo de "Songs" (Audio oficial) de YouTube Music. Evita videoclips de la plataforma estándar.</div>
+        <span class="node-lib">ytmusicapi</span>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 8px;">
+        <svg width="40" height="20" viewBox="0 0 40 20" class="arrow-svg">
+          <defs><marker id="a3" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="rgba(148,163,184,0.6)"/></marker></defs>
+          <line x1="2" y1="10" x2="32" y2="10" stroke="rgba(148,163,184,0.5)" stroke-width="1.5" marker-end="url(#a3)"/>
+        </svg>
+      </div>
+      <div class="node node-ytm">
+        <div class="node-icon">⬇️</div>
+        <div class="step-badge">Paso 4</div>
+        <div class="node-name">Descargador de Audio</div>
+        <div class="node-desc">Extrae el flujo en M4A / AAC a 256kbps. Formato nativo óptimo para la decodificación por hardware de Apple A5 (iPod Touch 5).</div>
+        <span class="node-lib">yt-dlp</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="arrow-connector">
+    <div class="arrow-line">
+      <div class="arrow-label">🎵 Audio en disco → Post-Procesamiento de etiquetas</div>
+    </div>
+  </div>
+
+  <!-- FASE 3 -->
+  <div class="phase phase-3">
+    <div class="phase-header">
+      <div class="phase-number">F3</div>
+      <div>
+        <div class="phase-title">Fase 3 — Inyección y Preparación de Tags</div>
+        <div class="phase-subtitle">Preparar el archivo de audio multimedia de forma enriquecida y autocontenida</div>
+      </div>
+    </div>
+    <div class="nodes-row">
+      <div class="node node-ssh">
+        <div class="node-icon">📝</div>
+        <div class="step-badge">Paso 5a</div>
+        <div class="node-name">API Letras Sincronizadas</div>
+        <div class="node-desc">Obtiene la letra sincronizada en formato LRC (con marcas de tiempo) para integrarla en el reproductor de iOS 8.4.1.</div>
+        <span class="node-lib">LRCLIB API</span>
+      </div>
+      <div style="display:flex;align-items:center;padding:0 8px;">
+        <svg width="40" height="20" viewBox="0 0 40 20" class="arrow-svg">
+          <defs><marker id="a4" markerWidth="6" markerHeight="6" refX="5" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="rgba(148,163,184,0.6)"/></marker></defs>
+          <line x1="2" y1="10" x2="32" y2="10" stroke="rgba(148,163,184,0.5)" stroke-width="1.5" marker-end="url(#a4)"/>
+        </svg>
+      </div>
+      <div class="node node-process">
+        <div class="node-icon">🏷️</div>
+        <div class="step-badge">Paso 5b</div>
+        <div class="node-name">Compilador de Metadatos</div>
+        <div class="node-desc">Toma el archivo M4A y le añade la carátula, letra, artista, título, álbum y pista de Spotify en los contenedores de metadatos correspondientes.</div>
+        <span class="node-lib">mutagen</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- CONNECTOR -->
+  <div class="arrow-connector">
+    <div class="arrow-line">
+      <div class="arrow-label">📦 Archivos enriquecidos listos → Inicio de Sincronización Inalámbrica</div>
+    </div>
+  </div>
+
+  <!-- SECCIÓN FINAL: CONEXIÓN WI-FI AL IPOD -->
+  <div class="final-section">
+    <div class="node node-ssh" style="max-width:100%;transform:none">
+      <div class="node-icon" style="width:52px;height:52px;font-size:26px">🚀</div>
+      <div class="step-badge">Paso 6 (PC)</div>
+      <div class="node-name" style="font-size:16px">Orquestador de Sincronización</div>
+      <div class="node-desc" style="font-size:13px">Establece conexión SSH. Compara archivos remotos en el iPod Touch y sube los nuevos M4A al directorio de entrada del iPod por canal SFTP sobre Wi-Fi.</div>
+      <span class="node-lib">paramiko (Python) / rsync</span>
+    </div>
+
+    <div class="final-arrow">
+      <div class="final-arrow-label">
+        Wi-Fi Sync (SSH/SFTP)
+        <div style="margin-top: 6px;">
+          <span class="wave-dot"></span>
+          <span class="wave-dot"></span>
+          <span class="wave-dot"></span>
+        </div>
+      </div>
+    </div>
+
+    <div class="node node-ipod" style="max-width:100%;transform:none">
+      <div class="node-icon" style="width:52px;height:52px;font-size:26px">📱</div>
+      <div class="step-badge">Paso 7 (iPod iOS 8.4.1)</div>
+      <div class="node-name" style="font-size:16px">Importador Gremlin / App Música</div>
+      <div class="node-desc" style="font-size:13px">Recibe la señal de la PC y ejecuta <code>gremlinimport</code> sobre la carpeta local. Inyecta los archivos de audio en <code>MediaLibrary.sqlitedb</code> de inmediato. Las letras y carátulas se renderizan de forma nativa.</div>
+      <span class="node-lib">OpenSSH + Gremlin (Cydia)</span>
+    </div>
+  </div>
+
+  <!-- CARDS DE DETALLE -->
+  <div class="details-grid">
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <div class="detail-icon">🔒</div>
+        <div>
+          <div class="detail-title">Jailbreak iOS 8.4.1</div>
+          <div class="detail-step">EtasonJB (Untethered)</div>
+        </div>
+      </div>
+      <ul class="detail-list">
+        <li>Cydia Substrate y acceso de root completo al sistema.</li>
+        <li>OpenSSH en puerto 22 para administración remota.</li>
+        <li>Servicio de transferencia seguro de archivos (SFTP).</li>
+        <li>Bypass de restricciones de sandbox y protección de la App Store.</li>
+        <li>Ejecución de scripts shell y comandos nativos en segundo plano.</li>
+      </ul>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <div class="detail-icon">⚙️</div>
+        <div>
+          <div class="detail-title">Importador Gremlin API</div>
+          <div class="detail-step">Cydia Gremlin / JODebox</div>
+        </div>
+      </div>
+      <ul class="detail-list">
+        <li>Vincula archivos multimedia al indexador nativo de iOS.</li>
+        <li>Evita la necesidad de usar iTunes/CopyTrans.</li>
+        <li>Procesa letras integradas directamente en la app de música.</li>
+        <li>Agrupa y actualiza vistas de listas sin reiniciar el dispositivo.</li>
+        <li>Ligero y estable: idóneo para los 512 MB de RAM de este chip A5.</li>
+      </ul>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <div class="detail-icon">🔄</div>
+        <div>
+          <div class="detail-title">Sincronización WiFi Incrementable</div>
+          <div class="detail-step">Delta Sync + Paramiko</div>
+        </div>
+      </div>
+      <ul class="detail-list">
+        <li>Verifica la base de datos SQLite antes de cada sincronización.</li>
+        <li>Si la canción ya está en el iPod, no realiza transferencia de red.</li>
+        <li>Permite la desconexión durante la transferencia sin corromper el iPod.</li>
+        <li>Genera registros (logs) detallados si se pierde la conexión.</li>
+        <li>Bajo consumo de CPU en el iPod mediante transacciones rápidas.</li>
+      </ul>
+    </div>
+
+    <div class="detail-card">
+      <div class="detail-card-header">
+        <div class="detail-icon">🎨</div>
+        <div>
+          <div class="detail-title">Optimización iOS 8.4.1</div>
+          <div class="detail-step">Rendimiento Máximo del iPod 5</div>
+        </div>
+      </div>
+      <ul class="detail-list">
+        <li>Decodificación por hardware de M4A/AAC a nivel de chip A5.</li>
+        <li>Mejor duración de batería al sincronizar de forma inalámbrica local.</li>
+        <li>Uso nativo de la clásica y valorada App Música de iOS 8.4.</li>
+        <li>Visualización automática de carátulas en pantalla bloqueada.</li>
+        <li>Acceso rápido a letras de canciones deslizando/pulsando carátulas.</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- TECH STACK -->
+  <div class="tech-section">
+    <div class="tech-title">🛠️ Stack Tecnológico Actualizado</div>
+    <div class="tech-grid">
+      <div class="tech-chip">
+        <span class="tech-chip-icon">🐍</span>
+        <div>
+          <div class="tech-chip-name">Python 3.11+</div>
+          <div class="tech-chip-role">Orquestador de lógica y descargas</div>
+        </div>
+      </div>
+      <div class="tech-chip">
+        <span class="tech-chip-icon">🔑</span>
+        <div>
+          <div class="tech-chip-name">paramiko</div>
+          <div class="tech-chip-role">Cliente SSH/SFTP para transferencias</div>
+        </div>
+      </div>
+      <div class="tech-chip">
+        <span class="tech-chip-icon">🎵</span>
+        <div>
+          <div class="tech-chip-name">spotipy</div>
+          <div class="tech-chip-role">API de Spotify para metadatos</div>
+        </div>
+      </div>
+      <div class="tech-chip">
+        <span class="tech-chip-icon">🎧</span>
+        <div>
+          <div class="tech-chip-name">ytmusicapi</div>
+          <div class="tech-chip-role">Buscador exclusivo de canciones en YT Music</div>
+        </div>
+      </div>
+      <div class="tech-chip">
+        <span class="tech-chip-icon">⬇️</span>
+        <div>
+          <div class="tech-chip-name">yt-dlp</div>
+          <div class="tech-chip-role">Descargador de flujos de audio M4A</div>
+        </div>
+      </div>
+      <div class="tech-chip">
+        <span class="tech-chip-icon">🏷️</span>
+        <div>
+          <div class="tech-chip-name">mutagen</div>
+          <div class="tech-chip-role">Inyección de carátula, letra e ID3 tags</div>
+        </div>
+      </div>
+      <div class="tech-chip">
+        <span class="tech-chip-icon">🛡️</span>
+        <div>
+          <div class="tech-chip-name">OpenSSH (iOS)</div>
+          <div class="tech-chip-role">Servicio daemon SSH/SFTP remoto en puerto 22</div>
+        </div>
+      </div>
+      <div class="tech-chip">
+        <span class="tech-chip-icon">⚙️</span>
+        <div>
+          <div class="tech-chip-name">Gremlin Framework / JODebox</div>
+          <div class="tech-chip-role">API Jailbreak para inyección de música local</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="warning-note">
+      <span class="warning-icon">🔐</span>
+      <div class="warning-text">
+        <strong>Nota de Seguridad SSH:</strong> Recuerda cambiar la contraseña predeterminada del usuario root y mobile de tu iPod (por defecto <code>alpine</code>) ejecutando el comando <code>passwd</code> a través de SSH para proteger tu dispositivo en tu red local.
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Diagrama de Arquitectura de Sincronización Inalámbrica · Spotify → iPod Touch 5 (iOS 8.4.1) · Generado con fines educativos y de análisis técnico
+</footer>
+
+<script>
+  // Animate on scroll
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.style.opacity = '1';
+        e.target.style.transform = 'translateY(0)';
+      }
+    });
+  }, { threshold: 0.1 });
+
+  document.querySelectorAll('.phase, .final-section, .detail-card, .tech-section').forEach(el => {
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(24px)';
+    el.style.transition = 'opacity 0.6s ease, transform 0.6s ease';
+    observer.observe(el);
+  });
+
+  // Node hover z-index
+  document.querySelectorAll('.node').forEach(node => {
+    node.addEventListener('mouseenter', () => { node.style.zIndex = '10'; });
+    node.addEventListener('mouseleave', () => { node.style.zIndex = ''; });
+  });
+</script>
+</body>
+</html>

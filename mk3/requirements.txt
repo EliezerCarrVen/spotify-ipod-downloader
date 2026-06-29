@@ -1,0 +1,8 @@
+spotipy==2.24.0
+ytmusicapi==1.8.2
+yt-dlp
+mutagen==1.47.0
+paramiko==3.4.0
+python-dotenv==1.0.1
+requests==2.32.3
+tqdm

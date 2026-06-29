@@ -1,0 +1,32 @@
+# Environment & secrets
+.env
+cookies.txt
+
+# Downloads (audio files)
+downloads/
+downloads_test/
+
+# Database
+*.db
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+
+# Cache files
+.cache
+liked_songs_cache.json
+
+# IDE
+.vscode/
+.idea/
+
+# OS files
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Agents/Gemini config
+.agents/
